@@ -21,3 +21,6 @@ Algorithm to down-sample a given image
 7) mvnz X, Y (move Y to X when ALU output is not nil: can be used to implement while loops easily)
 
 Can add more instructions here if we need. 
+
+## Reference
+Followed the guide on "reference.pdf". The architecture built is illustrated in it. 
