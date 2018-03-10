@@ -3,6 +3,7 @@
 ## Description 
 processor.v contains the outline for a simple processor. 
 Used IP cores to build counter (PC) and ALU. Can have upto 16 micro instructions. 
+(http://www.pldworld.com/_altera/html/_sw/q2help/source/mega/mega_file_lpm_counter.htm)
 
 ## To Do
 Finalize ISA
