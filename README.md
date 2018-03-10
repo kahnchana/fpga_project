@@ -6,11 +6,11 @@ Used IP cores to build counter (PC) and ALU. Can have upto 16 micro instructions
 (http://www.pldworld.com/_altera/html/_sw/q2help/source/mega/mega_file_lpm_counter.htm)
 
 ## To Do
-Finalize ISA
-Code Control Units Logic (the micro instructions)
-Test the current architecture of processor
-Create RAM to load images and data to
-Algorithm to down-sample a given image
+* Finalize ISA
+* Code Control Units Logic (the micro instructions)
+* Test the current architecture of processor
+* Create RAM to load images and data to
+* Algorithm to down-sample a given image
 
 ## Proposed ISA instruction set
 1) mv X Y
