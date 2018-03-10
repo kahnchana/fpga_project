@@ -16,22 +16,22 @@
 // Can add upto 16 micro instructions
 
 module processor (DIN, Resetn, Clock, Run, Done, BusWires, ADDR, DOUT, W, Tstep_Q, PC);
-  input 			[15:0] 			DIN;  // data in to processor (from memory)
-  input 								Resetn;  // resets counter in middle of instruction
-  input 								Clock;  // clock input for register
-  input 								Run;  // should be high for processor to run
-  output reg 						Done;  // indicates end of instruction 
+  input 		[15:0] 			DIN;  // data in to processor (from memory)
+  input 						Resetn;  // resets counter in middle of instruction
+  input 						Clock;  // clock input for register
+  input 						Run;  // should be high for processor to run
+  output reg					Done;  // indicates end of instruction 
   output reg 	[15:0] 			BusWires;  // outputs values on bus wires
   output  		[15:0]			ADDR;  // address register to access memory 
   output  		[15:0]			DOUT;  // data register to write to memory 
-  output reg						W;  // write enable for memory
-  output 		[2:0]				Tstep_Q;  // internal counter
+  output reg					W;  // write enable for memory
+  output 		[2:0]			Tstep_Q;  // internal counter
   output 		[15:0]			PC;  // program counter
 
   //declare registers and wires
-  reg 				IRin, DINout, Ain, Gout, Gin, ADDRin, DOUTin;  // enable bits for registers
-  reg					AddSub;  // enable bit for subtraction in ALU 
-  reg 				incr_pc;  // enable bit to increase counter
+  reg 			IRin, DINout, Ain, Gout, Gin, ADDRin, DOUTin;  // enable bits for registers
+  reg			AddSub;  // enable bit for subtraction in ALU 
+  reg 			incr_pc;  // enable bit to increase counter
   reg 	[7:0] 	Rout;  // selection register for MUX (to pick GP register) 
   reg 	[7:0] 	Rin;  // enable bits for PC (R[0]) and 7 general purpose registers
   reg 	[9:0] 	MUXsel;  // multiplexer output
@@ -66,14 +66,14 @@ module processor (DIN, Resetn, Clock, Run, Done, BusWires, ADDR, DOUT, W, Tstep_
     Gout = 1'b0;
     Gin = 1'b0;
     AddSub = 1'b0;
-	 DouTin = 1'b0;
+	DouTin = 1'b0;
     ADDRin = 1'b0;
     W_D = 1'b0;
     incr_pc = 1'b0;
     Done = 1'b0;
 
-	 // begin counter and defines micro instructions
-	 // need to make changes here: forgot PC :-p
+	// begin counter and defines micro instructions
+	// need to make changes here: forgot PC :-p
 	 
     case (Tstep_Q)
       3'b000: // store DIN in IR in time step 0
