@@ -8,7 +8,7 @@
 // Data can be written to registers, or obtained from BusWires by other module
 // Addition and Substraction operations can be performed
 
-// Note: only MUX can load values to Bus
+// Note: only MUX can load values to Bus(edit)
 // Also, all registers' outputs are connected to Mux (except IR and A)
 // Register A connected to ALU and IR to CU directly
 
