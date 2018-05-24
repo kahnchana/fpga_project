@@ -1,5 +1,3 @@
-//edit
-
 module alu (
 	A_bus,
 	B_bus,
