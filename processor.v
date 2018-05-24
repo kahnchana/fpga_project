@@ -8,238 +8,59 @@
 // Data can be written to registers, or obtained from BusWires by other module
 // Addition and Substraction operations can be performed
 
-// Note: only MUX can load values to Bus(edit)
+// Note: only MUX can load values to Bus
 // Also, all registers' outputs are connected to Mux (except IR and A)
 // Register A connected to ALU and IR to CU directly
 
 // Includes only move, obtain data, add, subtract micro-instructions
 // Can add upto 16 micro instructions
 
-module processor (DIN, Resetn, Clock, Run, Done, BusWires, ADDR, DOUT, W, Tstep_Q, PC);
-  input 		[15:0] 			DIN;  // data in to processor (from memory)
-  input 						Resetn;  // resets counter in middle of instruction
-  input 						Clock;  // clock input for register
-  input 						Run;  // should be high for processor to run
-  output reg					Done;  // indicates end of instruction 
-  output reg 	[15:0] 			BusWires;  // outputs values on bus wires
-  output  		[15:0]			ADDR;  // address register to access memory 
-  output  		[15:0]			DOUT;  // data register to write to memory 
-  output reg					W;  // write enable for memory
-  output 		[2:0]			Tstep_Q;  // internal counter
-  output 		[15:0]			PC;  // program counter
-
-  //declare registers and wires
-  reg 			IRin, DINout, Ain, Gout, Gin, ADDRin, DOUTin;  // enable bits for registers
-  reg			AddSub;  // enable bit for subtraction in ALU 
-  reg 			incr_pc;  // enable bit to increase counter
-  reg 	[7:0] 	Rout;  // selection register for MUX (to pick GP register) 
-  reg 	[7:0] 	Rin;  // enable bits for PC (R[0]) and 7 general purpose registers
-  reg 	[9:0] 	MUXsel;  // multiplexer output
+module processor (clock, enable, ram_out, iram_out, finish, clock_out, dram_wr_en, dram_addr, dram_din, iram_addr); 
+ input								clock; // connect internal clock of FPGA
+ input 								enable; // enable bit for processor
+ input 			[7:0] 			ram_out; // input from DRAM
+ input 			[7:0] 			iram_out; // input from IRAM
+ output								finish; // end of process flag
+ output 								clock_out; // frequency reduced clock
+ output								dram_wr_en; // write enable for DRAM
+ output 			[15:0] 			dram_addr; // address for DRAM
+ output 			[7:0] 			dram_din; // data to write to DRAM
+ output 			[7:0]				iram_addr; // IRAM address
   
-  wire 	[7:0] 	Xreg, Yreg;  // one-hot value for data registers of instruction
-  wire 	[1:9] 	IR;  // instruction regiser
-  wire 	[1:3] 	I;  // instruction part of instruction
-  wire 	[15:0] 	R0, R1, R2, R3, R4, R5, R6, R7;  //general purpose registers
-  wire 	[15:0] 	A, G;  //output of ALU input and output registers
-  wire 	[15:0]	result;  //ALU out to G connection
-  wire 	[2:0] 	Tstep_Q;  // counter for instructions taking multiple clock cycles
-
-  wire Clear = Done || ~Resetn;  // clear resets the counter
-  upcount Tstep (Clear, Clock, Tstep_Q);  // instantiates the counter 
+ wire clk; // reduced frequency clock 
+ wire z; // ALU output AC zero flag
+ wire pcinc; // increase program counter 
+ wire r1inc, r2inc, r3inc; // increase general purpose registers
+ wire acinc; // increase ALU output accumulator
+ wire fetch; // load data to instruction register (IR)
+ wire [2:0] MUXSel; // select mux output on B_bus
+ wire [2:0] aluop; // select ALU operation (state_machine to ALU) 
+ wire [7:0] IR; // load instruction from IR to state_machine
+ wire [7:0] cflag; // load data to the all registers (except IR): state_machine to registers
+ wire [15:0] bus; // MUX output to registers input(main bus)
+ wire [15:0] PC, R1, R2, R3, R; // program counter and GP registers output to MUX
+ wire [15:0] AC; // ALU output accumulator to MUX
+ wire [15:0] C_bus; // ALU output to accumulator
   
-  assign I = IR[1:3];  //obtains instruction part from IR
+ assign 	clock_out = clk; 
+ assign	dram_wr_en = cflag[0]; 
+ assign 	dram_din = bus[7:0]; 
+ assign	iram_addr = PC[7:0]; 
   
-  dec3to8 decX (IR[4:6], 1'b1, Xreg);  // converts register addresses to one-hot
-  dec3to8 decY (IR[7:9], 1'b1, Yreg);  // converts register addresses to one-hot
-  // one-hot encoding used to simplify multiplexer 
+ ///module instances 
+ clock_divider clock_divider1(clock, enable, finish, clk); // clock frequency reducer
+ state_machine state_machine1(clk, z, IR, pcinc, r1inc, r2inc, r3inc, acinc, MUXSel, aluop, fetch, cflag, finish); // state_machine
+ mux mux1(MUXSel, ram_out, PC, R1, R2, R3, R, AC, iram_out, bus); // multiplexer
+ alu alu16(AC, bus, aluop, C_bus, z); // ALU
  
- 
-  // obtain inputs and define Control Unit's (CU) Micro Instructions
-  always @(Tstep_Q or I or Xreg or Yreg)
-  begin
-    // specify initial values (all set to zero)
-    IRin = 1'b0;
-    Rout[7:0] = 8'b00000000;
-    Rin[7:0] = 8'b00000000;
-    DINout = 1'b0;
-    Ain = 1'b0;
-    Gout = 1'b0;
-    Gin = 1'b0;
-    AddSub = 1'b0;
-	DouTin = 1'b0;
-    ADDRin = 1'b0;
-    W_D = 1'b0;
-    incr_pc = 1'b0;
-    Done = 1'b0;
-
-	// begin counter and defines micro instructions
-	// need to make changes here: forgot PC :-p
-	 
-    case (Tstep_Q)
-      3'b000: // store DIN in IR in time step 0
-      begin
-			if (Run) IRin = 1'b1;  // setting enable bit to one activates register
-			else Done = 1'b1;
-      end
-      3'b001: // define signals in time step 1
-        case (I)
-          3'b000:  // mv 
-          begin
-            Rout = Yreg;  // mux selects register Yreg to output to bus
-            Rin = Xreg;  // register Xreg is enabled (stores data on bus)
-            Done = 1'b1;  //resets clock & indicates end of instruction cycle
-          end
-          3'b001:  // mvi
-          begin
-            DINout = 1'b1; // mux selects DIn to output to bus
-            Rin = Xreg;  // register Xreg is enabled (stores data on bus)
-            Done = 1'b1;
-          end
-          3'b010:  //add
-          begin
-            Rout = Xreg;  // Xreg loaded to bus
-            Ain = 1'b1;  // bus data stored to A
-          end
-          3'b011:  //subtract
-          begin
-            Rout = Xreg; // Xreg loaded to bus
-            Ain = 1'b1;  // bus data stored to A
-          end
-        endcase
-      3'b010: // define signals in time step 2
-        case (I)
-          3'b010:  // add
-          begin
-            Rout = Yreg;  // Yreg loaded to bus
-            Gin = 1'b1;  // ALU output loaded to G 
-          end
-          3'b011:  // subtract
-          begin
-            Rout = Yreg;  // Yreg loaded to bus
-				AddSub = 1'b1;  // Substraction activated on ALU 
-            Gin = 1'b1;  // ALU output loaded to G             
-          end
-        endcase
-      3'b011: //define signals in time step 3
-        case (I)
-          3'b010:  //add
-          begin
-            Gout = 1'b1;  // G loaded to bus
-            Rin = Xreg;  // Bus value stored in Xreg
-            Done = 1'b1;
-          end
-          3'b011:
-          begin
-            Gout = 1'b1;  // G loaded to bus
-            Rin = Xreg;  // Bus value stored in Xreg
-            Done = 1'b1;
-          end
-        endcase
-    endcase
-  end
-
-  // create general purpose registers 
-  counter_lpm reg_PC (1'b1, Clock, incr_pc, BusWires, ~resetn, Rin[0], Clock, PC);
-  regn reg_1 (BusWires, Rin[1], Clock, R1);
-  regn reg_2 (BusWires, Rin[2], Clock, R2);
-  regn reg_3 (BusWires, Rin[3], Clock, R3);
-  regn reg_4 (BusWires, Rin[4], Clock, R4);
-  regn reg_5 (BusWires, Rin[5], Clock, R5);
-  regn reg_6 (BusWires, Rin[6], Clock, R6);
-  regn reg_7 (BusWires, Rin[7], Clock, R7);
-
-  // create instruction register
-  regn reg_IR (DIN[8:0], IRin, Clock, IR);
-  defparam reg_IR.n = 9;
+ regn ar(clk, cflag[7], bus, dram_addr); // address register
+ regn r(clk, cflag[2], bus, R); // r register
+ regn ir(clk, fetch, bus[7:0], IR);  // instruction register
+ defparam ir.n = 8;
+ regn_incr pc(clk, cflag[6], pcinc, bus, PC); // program counter
+ regn_incr r1(clk,cflag[5],r1inc,bus,R1); // register R1
+ regn_incr r2(clk,cflag[4],r2inc,bus,R2); // register R2
+ regn_incr r3(clk,cflag[3],r3inc,bus,R3); // register R3
+ regn_incr ac(clk,cflag[1],acinc,C_bus,AC); // ALU output accumulator
   
-  // create ALU registers
-  regn reg_A (BusWires, Ain, Clock, A);
-  regn reg_G (result, Gin, Clock, G);
-
-  // create memory access registers
-  regn reg_ADDR (BusWires, ADDRin, Clock, ADDR);
-  regn reg_DOUT (BusWires, DOUTin, Clock, DOUT);
-  regn reg_W (W_D, 1'b1, Clock, W);
-  defparam reg_W.n = 1; 
-  
-  // create ALU (using IP core)
-  addsub AS (~AddSub, A, BusWires, result);
-
-  //define the bus
-  // input for MUX is in one hot encoding
-  always @ (MUXsel or Rout or Gout or DINout)
-  begin
-    MUXsel[9:2] = Rout;
-    MUXsel[1] = Gout;
-    MUXsel[0] = DINout;
-    
-    case (MUXsel)
-      10'b0000000001: BusWires = DIN; // Data from memory
-      10'b0000000010: BusWires = G;   // ALU output
-      10'b0000000100: BusWires = R0;  // R0 is PC
-      10'b0000001000: BusWires = R1;  // rest are general purpose registers
-      10'b0000010000: BusWires = R2;
-      10'b0000100000: BusWires = R3;
-      10'b0001000000: BusWires = R4;
-      10'b0010000000: BusWires = R5;
-      10'b0100000000: BusWires = R6;
-      10'b1000000000: BusWires = R7;
-    endcase
-  end
-
-endmodule
-
-
-// create a timer for instructions taking multiple clock cycles
-module upcount(Clear, Clock, Q);
-  input Clear, Clock;
-  output [2:0] Q;
-  reg [2:0] Q;
-
-  always @(posedge Clock)
-    if (Clear)
-      Q <= 3'b0;
-    else
-      Q <= Q + 1'b1;
-endmodule
-
-
-// turn 3 bit binary values to one hot encoding
-module dec3to8(W, En, Y);
-  input [2:0] W;
-  input En;
-  output [0:7] Y;
-  reg [0:7] Y;
-
-  always @(W or En)
-  begin
-    if (En == 1)
-      case (W)
-        3'b000: Y = 8'b10000000;
-        3'b001: Y = 8'b01000000;
-        3'b010: Y = 8'b00100000;
-        3'b011: Y = 8'b00010000;
-        3'b100: Y = 8'b00001000;
-        3'b101: Y = 8'b00000100;
-        3'b110: Y = 8'b00000010;
-        3'b111: Y = 8'b00000001;
-      endcase
-    else
-      Y = 8'b00000000;
-  end
-endmodule
-
-
-// define registers module
-// Rin is enable, R is data, Q is output
-module regn(R, Rin, Clock, Q);
-  parameter n = 16;
-  input [n-1:0] R;
-  input Rin, Clock;
-  output [n-1:0] Q;
-  reg [n-1:0] Q;
-
-  always @(posedge Clock)
-    if (Rin)
-      Q <= R;
-endmodule
+endmodule 

@@ -27,7 +27,7 @@ module state_machine(
  output reg [2:0] bflag; // controls output to B bus through mux
  output reg [7:0] cflag; // write data to each of eight registers (AR,PC,R1,R2,R3,R,AC,M)
   
- reg [5:0] PS, NS = FETCH1; 
+ reg [5:0] PS, NS = FETCH1; // PS: present state, NS: next state
   
  parameter 
  FETCH1  =6'd0, 
@@ -70,7 +70,8 @@ module state_machine(
  NOP   =6'd58, 
  END   =6'd60; 
   
- always@(negedgeclk) PS<=NS; 
+ always@(negedge clk) PS<=NS; 
+ 
  always@(PS or z or ir) 
   case(PS)
    FETCH1:begin 
