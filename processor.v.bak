@@ -4,10 +4,16 @@
 //=======================================================
 
 // Processor (proc)
-// Data can be obtained DRAM and saved to DRAM
-// Instructions are obtained from the IRAM (ROM)
-// Uses a state_machine module for holding micro instructions
-// Contains ALU supporting 7 different operations
+// Data can be obtained from registers, or the data input from DIn
+// Data can be written to registers, or obtained from BusWires by other module
+// Addition and Substraction operations can be performed
+
+// Note: only MUX can load values to Bus
+// Also, all registers' outputs are connected to Mux (except IR and A)
+// Register A connected to ALU and IR to CU directly
+
+// Includes only move, obtain data, add, subtract micro-instructions
+// Can add upto 16 micro instructions
 
 module processor (clock, enable, ram_out, iram_out, finish, clock_out, dram_wr_en, dram_addr, dram_din, iram_addr); 
  input								clock; // connect internal clock of FPGA
@@ -39,7 +45,7 @@ module processor (clock, enable, ram_out, iram_out, finish, clock_out, dram_wr_e
  assign 	clock_out = clk; 
  assign	dram_wr_en = cflag[0]; 
  assign 	dram_din = bus[7:0]; 
- assign	iram_addr = PC[7:0]; 
+ assign	im_addr = PC[7:0]; 
   
  ///module instances 
  clock_divider clock_divider1(clock, enable, finish, clk); // clock frequency reducer
