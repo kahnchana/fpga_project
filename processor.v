@@ -42,7 +42,7 @@ module processor (clock, enable, ram_out, iram_out, finish, clock_out, dram_wr_e
  assign	iram_addr = PC[7:0]; 
   
  ///module instances 
- clock_divider clock_divider1(clock, enable, finish, clk); // clock frequency reducer
+ clock_divider clock_divider1(clock, enable, finish, clk); // clock frequency reducer (turning finish on stops clock)
  state_machine state_machine1(clk, z, IR, pcinc, r1inc, r2inc, r3inc, acinc, MUXSel, aluop, fetch, cflag, finish); // state_machine
  mux mux1(MUXSel, ram_out, PC, R1, R2, R3, R, AC, iram_out, bus); // multiplexer
  alu alu16(AC, bus, aluop, C_bus, z); // ALU

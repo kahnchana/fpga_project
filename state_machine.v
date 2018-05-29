@@ -37,7 +37,7 @@ module state_machine(
  CLAC1   =6'd3, 
  MVACAR1  =6'd59, 
  STAC1   =6'd4, 
- WRITE   =6'd53, 
+ STAC2   =6'd53, 
  MVACRI1  =6'd6, 
  MVACRII1  =6'd7, 
  MVACRIII1 =6'd8, 
@@ -74,7 +74,7 @@ module state_machine(
  
  always@(PS or z or ir) 
   case(PS)
-   FETCH1:begin 
+   FETCH1:begin // instruction loaded to bus from IRAM
     pcinc<=0; 
     r1inc<=0; 
     r2inc<=0; 
@@ -87,7 +87,7 @@ module state_machine(
     cflag<=8'b00000000; 
     NS<=FETCH2; 
    end 
-   FETCH2:begin  
+   FETCH2:begin // bus value written to IR
     pcinc<=0; 
     r1inc<=0; 
     r2inc<=0; 
@@ -100,7 +100,7 @@ module state_machine(
     cflag<=8'b00000000; 
     NS<=FETCH3; 
    end 
-   FETCH3:begin 
+   FETCH3:begin // program counter increased 
     pcinc<=1; 
     r1inc<=0; 
     r2inc<=0; 
@@ -113,7 +113,7 @@ module state_machine(
     cflag<=8'b00000000; 
     NS<=FETCH4; 
    end 
-   FETCH4:begin 
+   FETCH4:begin // IR value loaded to state machine
     pcinc<=0; 
     r1inc<=0; 
     r2inc<=0; 
@@ -126,7 +126,7 @@ module state_machine(
     cflag<=8'b00000000; 
     NS<=ir[5:0]; 
    end 
-   CLAC1:begin 
+   CLAC1:begin // clears accumulator
     pcinc<=0; 
     r1inc<=0; 
     r2inc<=0; 
@@ -139,7 +139,33 @@ module state_machine(
     cflag<=8'b00000010; 
     NS<=FETCH1; 
    end 
-   MVACAR1:begin 
+   STAC1:begin // update AC from ALU output, 
+    pcinc<=0; 
+    r1inc<=0; 
+    r2inc<=0; 
+    r3inc<=0; 
+    acinc<=0; 
+    fetch<=0; 
+    finish<=0; 
+    bflag<=3'd6; 
+    alu<=3'd0; 
+    cflag<=8'b00000001; 
+    NS<=STAC2; 
+   end
+	STAC2:begin // 
+    pcinc<=0; 
+    r1inc<=0; 
+    r2inc<=0; 
+    r3inc<=0; 
+    acinc<=0; 
+    fetch<=0; 
+    finish<=0; 
+    bflag<=3'd6; 
+    alu<=3'd0; 
+    cflag<=8'b00000001; 
+    NS<=FETCH1; 
+   end 
+   MVACAR1:begin // 
     pcinc<=0; 
     r1inc<=0; 
     r2inc<=0; 
@@ -150,32 +176,6 @@ module state_machine(
     bflag<=3'd6; 
     alu<=3'd0; 
 	 cflag<=8'b10000000; 
-    NS<=FETCH1; 
-   end 
-   STAC1:begin 
-    pcinc<=0; 
-    r1inc<=0; 
-    r2inc<=0; 
-    r3inc<=0; 
-    acinc<=0; 
-    fetch<=0; 
-    finish<=0; 
-    bflag<=3'd6; 
-    alu<=3'd0; 
-    cflag<=8'b00000001; 
-    NS<=WRITE; 
-   end 
-   WRITE:begin 
-    pcinc<=0; 
-    r1inc<=0; 
-    r2inc<=0; 
-    r3inc<=0; 
-    acinc<=0; 
-    fetch<=0; 
-    finish<=0; 
-    bflag<=3'd6; 
-    alu<=3'd0; 
-    cflag<=8'b00000001; 
     NS<=FETCH1; 
    end 
 	MVACRI1:begin 
